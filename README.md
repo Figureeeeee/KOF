@@ -1,9 +1,9 @@
 # KOF
 
 ## 总览
-目标：实现一个拳皇demo
-技术栈：HTML5、CSS3、JavaScript、Git
-ps:JavaScript的一些常用库：jQuery、requestAnimationFrame、canvas
+* 目标：实现一个拳皇demo
+* 技术栈：HTML5、CSS3、JavaScript、Git
+* ps:JavaScript的一些常用库：jQuery、requestAnimationFrame、canvas
 
 ## 按日期写总结
 
