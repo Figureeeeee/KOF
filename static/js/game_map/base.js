@@ -23,9 +23,10 @@ export class GameMap extends AcGameObject {
     }
 
     render() {
-        // this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+        this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
 
-        this.ctx.fillStyle = 'black';
-        this.ctx.fillRect(0, 0, this.$canvas.width(), this.$canvas.height());
+        // 测试时刷成黑的，如果不刷，就会显示路径
+        // this.ctx.fillStyle = 'black';
+        // this.ctx.fillRect(0, 0, this.$canvas.width(), this.$canvas.height())
     }
 }

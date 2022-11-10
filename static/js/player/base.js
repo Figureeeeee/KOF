@@ -28,6 +28,8 @@ export class Player extends AcGameObject {
 
         // 0:idle, 1:forward, 2:backward, 3:jump, 4:attack, 5:beattacked, 6:dead
         this.status = 3;
+        this.animations = new Map();
+        this.frame_current_cnt = 0;
     }
 
     start() {
@@ -49,7 +51,11 @@ export class Player extends AcGameObject {
         }
 
         if (this.status === 0 || this.status === 1) {
-            if (w) {
+            if (space) {
+                this.status = 4;
+                this.vx = 0;
+                this.frame_current_cnt = 0;
+            } else if (w) {
                 if (d) {
                     this.vx = this.speedx;
                 } else if (a) {
@@ -59,6 +65,7 @@ export class Player extends AcGameObject {
                 }
                 this.vy = this.speedy;
                 this.status = 3;
+                this.frame_current_cnt = 0;
             } else if (d) {
                 this.vx = this.speedx;
                 this.status = 1;
@@ -73,7 +80,9 @@ export class Player extends AcGameObject {
     }
 
     update_move() {
-        this.vy += this.gravity;
+        if (this.status == 3) {
+            this.vy += this.gravity;
+        }
         this.x += this.vx * this.timedelta / 1000;
         this.y += this.vy * this.timedelta / 1000;
 
@@ -90,15 +99,55 @@ export class Player extends AcGameObject {
         }
     }
 
+    update_direction() {
+        let players = this.root.players;
+        if (players[0] && players[1]) {
+            let me = this, you = players[1 - this.id];
+            if (me.x < you.x) me.direction = 1;
+            else me.direction = -1;
+        }
+    }
+
     update() {
         this.update_control();
         this.update_move();
+        this.update_direction();
 
         this.render();
     }
 
     render() {
-        this.ctx.fillStyle = this.color;
-        this.ctx.fillRect(this.x, this.y, this.width, this.height);
+        // this.ctx.fillStyle = this.color;
+        // this.ctx.fillRect(this.x, this.y, this.width, this.height);
+
+        let status = this.status;
+
+        if (this.status === 1 && this.direction * this.vx < 0) {
+            status = 2;
+        }
+
+        let obj = this.animations.get(status);
+        if (obj && obj.loaded) {
+
+            if (this.direction > 0) {
+                let k = parseInt(this.frame_current_cnt / obj.frame_rate) % obj.frame_cnt;
+                let image = obj.gif.frames[k].image;
+                this.ctx.drawImage(image, this.x, this.y + obj.offset_y, image.width * obj.scale, image.height * obj.scale);
+            } else {
+                this.ctx.save();
+                this.ctx.scale(-1, 1);
+                this.ctx.translate(-this.root.game_map.$canvas.width(), 0);
+                let k = parseInt(this.frame_current_cnt / obj.frame_rate) % obj.frame_cnt;
+                let image = obj.gif.frames[k].image;
+                this.ctx.drawImage(image, this.root.game_map.$canvas.width() - this.x - this.width, this.y + obj.offset_y, image.width * obj.scale, image.height * obj.scale);
+                this.ctx.restore();
+            }
+        }
+
+        if (status === 4)
+            if (this.frame_current_cnt === obj.frame_rate * (obj.frame_cnt - 1)) {
+                this.status = 0;
+            }
+        this.frame_current_cnt++;
     }
 }
