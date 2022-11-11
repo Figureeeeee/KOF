@@ -30,6 +30,10 @@ export class Player extends AcGameObject {
         this.status = 3;
         this.animations = new Map();
         this.frame_current_cnt = 0;
+
+        this.hp = 100;
+        this.$hp = this.root.$kof.find(`.kof-head-hp-${this.id}>div`);
+        this.$hp_div = this.$hp.find('div');
     }
 
     start() {
@@ -80,16 +84,44 @@ export class Player extends AcGameObject {
     }
 
     update_move() {
-        if (this.status == 3) {
-            this.vy += this.gravity;
-        }
+        this.vy += this.gravity;
+
         this.x += this.vx * this.timedelta / 1000;
         this.y += this.vy * this.timedelta / 1000;
+
+        // 这段代码是实现两个人是否碰撞，碰撞时无法穿透，并且可以推着对方走
+        // let [a, b] = this.root.players;
+        // if (a !== this) [a, b] = [b, a];
+
+        // let r1 = {
+        //     x1: a.x,
+        //     y1: a.y,
+        //     x2: a.x + a.width,
+        //     y2: a.x + a.height,
+        // };
+        // let r2 = {
+        //     x1: b.x,
+        //     y1: b.y,
+        //     x2: b.x + b.width,
+        //     y2: b.x + b.height,
+        // };
+
+        // if (this.is_collision(r1, r2)) {
+        //     b.x += this.vx * this.timedelta / 1000 / 2;
+        //     b.y += this.vy * this.timedelta / 1000 / 2;
+        //     a.x -= this.vx * this.timedelta / 1000 / 2;
+        //     a.y -= this.vy * this.timedelta / 1000 / 2;
+
+
+        //     if (this.status === 3) this.status = 0;
+        // }
 
         if (this.y > 450) {
             this.y = 450;
             this.vy = 0;
-            this.status = 0;
+
+            if (this.status === 3)
+                this.status = 0;
         }
 
         if (this.x < 0) {
@@ -100,6 +132,8 @@ export class Player extends AcGameObject {
     }
 
     update_direction() {
+        if (this.status === 6) return;
+
         let players = this.root.players;
         if (players[0] && players[1]) {
             let me = this, you = players[1 - this.id];
@@ -108,10 +142,72 @@ export class Player extends AcGameObject {
         }
     }
 
+    is_attack() {
+        if (this.status === 6) return;
+
+        this.status = 5;
+        this.frame_current_cnt = 0;
+        this.hp = Math.max(this.hp - 20, 0);
+
+        this.$hp_div.animate({
+            width: this.$hp.parent().width() * this.hp / 100,
+        }, 300);
+        this.$hp.animate({
+            width: this.$hp.parent().width() * this.hp / 100,
+        }, 600);
+
+        if (this.hp <= 0) {
+            this.status = 6;
+            this.frame_current_cnt = 0;
+            this.vx = 0;
+        }
+    }
+
+    is_collision(r1, r2) {
+        if (Math.max(r1.x1, r2.x1) > Math.min(r1.x2, r2.x2))
+            return false;
+        if (Math.max(r1.y1, r2.y1) > Math.min(r1.y2, r2.y2))
+            return false;
+        return true;
+    }
+
+    update_attack() {
+        if (this.status === 4 && this.frame_current_cnt === 18) {
+            let me = this, you = this.root.players[1 - this.id];
+            let r1;
+            if (this.direction > 0) {
+                r1 = {
+                    x1: me.x + 120,
+                    y1: me.y + 40,
+                    x2: me.x + 120 + 100,
+                    y2: me.y + 40 + 20,
+                };
+            } else {
+                r1 = {
+                    x1: me.x - 120 + me.width - 100,
+                    y1: me.y + 40,
+                    x2: me.x - 120 + me.width - 100 + 100,
+                    y2: me.y + 40 + 20,
+                };
+            }
+            let r2 = {
+                x1: you.x,
+                y1: you.y,
+                x2: you.x + you.width,
+                y2: you.y + you.height,
+            }
+
+            if (this.is_collision(r1, r2)) {
+                you.is_attack();
+            }
+        }
+    }
+
     update() {
         this.update_control();
         this.update_move();
         this.update_direction();
+        this.update_attack();
 
         this.render();
     }
@@ -119,6 +215,18 @@ export class Player extends AcGameObject {
     render() {
         // this.ctx.fillStyle = this.color;
         // this.ctx.fillRect(this.x, this.y, this.width, this.height);
+
+        // this.ctx.fillStyle = 'blue';
+        // this.ctx.fillRect(this.x, this.y, this.width, this.height);
+
+        // if (this.direction > 0) {
+        //     this.ctx.fillStyle = 'red';
+        //     this.ctx.fillRect(this.x + 120, this.y + 40, 100, 20);
+        // } else {
+        //     this.ctx.fillStyle = 'red';
+        //     this.ctx.fillRect(this.x - 120 + this.width - 100, this.y + 40, 100, 20);
+        // }
+
 
         let status = this.status;
 
@@ -144,9 +252,13 @@ export class Player extends AcGameObject {
             }
         }
 
-        if (status === 4)
+        if (status === 4 || status === 5 || status === 6)
             if (this.frame_current_cnt === obj.frame_rate * (obj.frame_cnt - 1)) {
-                this.status = 0;
+                if (status === 6) {
+                    this.frame_current_cnt--;
+                } else {
+                    this.status = 0;
+                }
             }
         this.frame_current_cnt++;
     }
